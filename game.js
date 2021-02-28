@@ -1,33 +1,76 @@
+//HTML elements
 let randomCountryElement = document.querySelector('#random-country')
 let userAnswerElement = document.querySelector("#user-answer")
 let submitButton = document.querySelector("#submit-answer")
 let resultTextElement = document.querySelector('#result')
+let playAgainButton = document.querySelector("#play-again")
 
-// TODO finish the script to challenge the user about their knowledge of capital cities.
-// An array of country codes is provided in the countries.js file. 
-// Your browser treats all JavaScript files as one big file, o
-// organized in the order of the script tags so the countriesAndCodes array is available to this script.
-
-console.log(countriesAndCodes)  // You don't need to log countriesAndCodes - just proving it is available 
-
-
-// TODO when the page loads, select an element at random from the countriesAndCodes array
-
-// TODO display the country's name in the randomCountryElement 
-
-// TODO add a click event handler to the submitButton.  When the user clicks the button,
-//  * read the text from the userAnswerElement 
-//  * Use fetch() to make a call to the World Bank API with the two-letter country code (from countriesAndCodes, example 'CN' or 'AF')
-//  * Verify no errors were encountered in the API call. If an error occurs, display an alert message. 
-//  * If the API call was successful, extract the capital city from the World Bank API response.
-//  * Compare it to the user's answer. 
-//      You can decide how correct you require the user to be. At the minimum, the user's answer should be the same
-//      as the World Bank data - make the comparison case insensitive.
-//      If you want to be more flexible, include and use a string similarity library such as https://github.com/hiddentao/fast-levenshtein 
-//  * Finally, display an appropriate message in the resultTextElement to tell the user if they are right or wrong. 
-//      For example "Correct! The capital of Germany is Berlin" or "Wrong - the capital of Germany is not G, it is Berlin"
+//variables to be used by getRandomCountry()
+let countryName
+let countryCode
+let countryCapital
 
 
-// TODO finally, connect the play again button. Clear the user's answer, select a new random country, 
-// display the country's name, handle the user's guess. If you didn't use functions in the code you've 
-// already written, you should refactor your code to use functions to avoid writing very similar code twice. 
+function getRandomCountry() {
+    // instructions for random found here: 
+    // https://www.designcise.com/web/tutorial/how-to-select-a-random-element-from-a-javascript-array
+    //get random country from country list
+    const randIndex = Math.floor(Math.random() * countriesAndCodes.length)
+    let countryRandom = countriesAndCodes[randIndex]
+    countryCode = countryRandom["alpha-2"]
+    countryName = countryRandom["name"]
+
+    //get capital for random country
+    //I wanted this in the same function as getting a country
+    //so that I can warn the user when there has been a mismatch in the data...
+    //before they have a chance to make their guess
+    let worldBankAPIURL = `https://api.worldbank.org/v2/country/${countryCode}?format=json`
+    fetch(worldBankAPIURL)
+        .then(res => res.json())
+        .then(worldBankData => {
+            countryCapital = worldBankData[1][0].capitalCity
+
+            console.log(countryCapital) //so users who open devtools can cheat :D
+
+            //ask user to reload if no/invalid data
+            if (countryCapital == "")
+                alert(`Error: No data for capital of ${countryName}, please click Play Again or reload page.`)
+        })
+        .catch(error => {
+            alert("Error fetching data.\n\n", error)
+        })
+}
+
+
+function gradeUserAnswer(answer) {
+    //make case insensitive by making everything uppercase...
+    //and trim white space in user answer
+    let countryCapitalUpper = countryCapital.toUpperCase()
+    let answerUpper = answer.trim().toUpperCase()
+
+    if (answerUpper === countryCapitalUpper) 
+        resultTextElement.innerHTML = `Correct! The capital of ${countryName} is ${answer}.`
+    else 
+        resultTextElement.innerHTML = `Incorrect! The capital of ${countryName} is ${countryCapital}, not ${answer}.`
+
+}
+
+window.addEventListener("load", () => {
+    //get random country and get country's capital on page load
+    getRandomCountry()
+    randomCountryElement.innerHTML = countryName
+})
+
+submitButton.addEventListener("click", () => {
+    //take user input to be graded
+    let answer = userAnswerElement.value
+    gradeUserAnswer(answer)
+})
+
+playAgainButton.addEventListener("click", () => {
+    //get random country, clear everything, put new country in randomCountryElement
+    getRandomCountry()
+    userAnswerElement.value = ""
+    resultTextElement.innerHTML = ""
+    randomCountryElement.innerHTML = countryName
+})
